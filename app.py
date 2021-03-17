@@ -66,7 +66,6 @@ def signup():
     """
 
     form = UserAddForm()
-
     if form.validate_on_submit():
         try:
             user = User.signup(
@@ -153,7 +152,7 @@ def show_following(user_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect("/"), 403
 
     user = User.query.get_or_404(user_id)
     return render_template('users/following.html', user=user)
@@ -165,7 +164,7 @@ def users_followers(user_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect("/"), 403
 
     user = User.query.get_or_404(user_id)
     return render_template('users/followers.html', user=user)
@@ -177,7 +176,7 @@ def add_follow(follow_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect("/"), 403
 
     followed_user = User.query.get_or_404(follow_id)
     g.user.following.append(followed_user)
@@ -192,7 +191,7 @@ def stop_following(follow_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect("/"), 403
 
     followed_user = User.query.get(follow_id)
     g.user.following.remove(followed_user)
@@ -206,7 +205,7 @@ def profile():
     """Update profile for current user."""
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect("/"), 403
 
     form = EditUserForm(obj=g.user)
 
@@ -228,7 +227,7 @@ def delete_user():
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect("/"), 403
 
     do_logout()
 
@@ -243,7 +242,7 @@ def show_likes(user_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect("/"), 403
 
     user = User.query.get_or_404(user_id)
 
@@ -262,7 +261,7 @@ def messages_add():
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect("/"), 403
 
     form = MessageForm()
 
@@ -292,7 +291,7 @@ def messages_destroy(message_id):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    msg = Message.query.get_or_404(message_id)  # Bug Found added 404
+    msg = Message.query.get_or_404(message_id)  # Bug Found added 404 Need to check if user is the author
     db.session.delete(msg)
     db.session.commit()
 
