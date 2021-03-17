@@ -296,12 +296,16 @@ def homepage():
     """Show homepage:
 
     - anon users: no messages
-    - logged in: 100 most recent messages of followed_users
+    - logged in: 100 most recent messages of followed_users and logged in user
     """
 
     if g.user:
+        # wth going on here?
+        ids_to_pull_from = [fol_user.id for fol_user in g.user.following]
+        ids_to_pull_from.append(g.user.id)
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(ids_to_pull_from))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
