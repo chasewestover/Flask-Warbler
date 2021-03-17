@@ -32,7 +32,7 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
-
+    # access g in templates, g only lives for life of request
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
 
@@ -301,10 +301,11 @@ def homepage():
 
     if g.user:
         # wth going on here?
-        ids_to_pull_from = [fol_user.id for fol_user in g.user.following]
-        ids_to_pull_from.append(g.user.id)
+        ids_to_pull_from = [fol_user.id for fol_user in g.user.following] + [g.user.id]
         messages = (Message
                     .query
+                    # need filter for in and like
+                    # filter_by doesn't need the object passed again
                     .filter(Message.user_id.in_(ids_to_pull_from))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
