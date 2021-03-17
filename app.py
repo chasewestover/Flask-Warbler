@@ -141,8 +141,9 @@ def list_users():
 def users_show(user_id):
     """Show user profile."""
 
-    user = User.query.get_or_404(user_id)
 
+    user = User.query.get_or_404(user_id)
+    
     return render_template('users/show.html', user=user)
 
 
