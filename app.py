@@ -280,11 +280,30 @@ def messages_destroy(message_id):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    msg = Message.query.get(message_id)
+    msg = Message.query.get_or_404(message_id)  # Bug Found added 404
     db.session.delete(msg)
     db.session.commit()
 
     return redirect(f"/users/{g.user.id}")
+
+@app.route('/messages/<int:message_id>/like', methods=["POST"])
+def messages_toggle_like(message_id):
+    """ Like a message """
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    msg = Message.query.get_or_404(message_id)
+
+    if msg in g.user.likes:
+        index = g.user.likes.index(msg)
+        g.user.likes.pop(index)
+    else:
+        g.user.likes.append(msg)
+    db.session.commit()
+    return redirect("/")
+
 
 
 ##############################################################################
