@@ -237,6 +237,18 @@ def delete_user():
 
     return redirect("/signup")
 
+@app.route('/users/<int:user_id>/likes')
+def show_likes(user_id):
+    """Show list of user's likes"""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    user = User.query.get_or_404(user_id)
+
+    return render_template('users/likes.html', user=user)
+
 
 ##############################################################################
 # Messages routes:
@@ -297,8 +309,7 @@ def messages_toggle_like(message_id):
     msg = Message.query.get_or_404(message_id)
 
     if msg in g.user.likes:
-        index = g.user.likes.index(msg)
-        g.user.likes.pop(index)
+        g.user.likes.remove(msg)
     else:
         g.user.likes.append(msg)
     db.session.commit()
