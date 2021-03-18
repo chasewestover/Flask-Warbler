@@ -60,7 +60,6 @@ class UserModelTestCase(TestCase):
 
         self.user = user
         self.user2 = user2
-        self.client = app.test_client()
 
     def tearDown(self):
         """Clean up fouled transactions."""

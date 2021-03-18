@@ -47,15 +47,33 @@ class MessageViewTestCase(TestCase):
                                     email="test@test.com",
                                     password="testuser",
                                     image_url=None)
+        
+        msg = Message(text='Test')
+        self.testuser.messages.append(msg)
 
         db.session.commit()
+        self.testuser = User.query.filter_by(username='testuser').one()
+        self.msg = Message.query.get(msg.id)
 
-    def test_add_message(self):
+    def tearDown(self):
+        """Clean up fouled transactions."""
+
+        super().tearDown()
+        db.session.rollback()
+
+
+    def test_fail_add_message(self):
         """Can use add a message?"""
 
         # Since we need to change the session to mimic logging in,
         # we need to use the changing-session trick:
 
+        with self.client as c:
+            #Check that you can't post if logged out
+            resp = c.post("/messages/new", data={"text": "Test message"})
+            self.assertEqual(resp.status_code, 403)
+
+    def test_success_add_message(self):
         with self.client as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.testuser.id
@@ -68,5 +86,28 @@ class MessageViewTestCase(TestCase):
             # Make sure it redirects
             self.assertEqual(resp.status_code, 302)
 
-            msg = Message.query.one()
+            msg = Message.query.all()[-1]
             self.assertEqual(msg.text, "Hello")
+
+    def test_success_delete_msg(self):
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+
+            resp = c.post(f"/messages/{self.msg.id}/delete")
+
+            self.assertEqual(resp.status_code, 302)
+            self.assertEqual(len(Message.query.all()), 0)
+
+    def test_fail_delete_message(self):
+        """Can use add a message?"""
+
+        # Since we need to change the session to mimic logging in,
+        # we need to use the changing-session trick:
+
+        with self.client as c:
+            #Check that you can't post if logged out
+            resp = c.post(f"/messages/{self.msg.id}/delete")
+            self.assertEqual(resp.status_code, 403)
+
+    # make sure delete doesn't work if logged out

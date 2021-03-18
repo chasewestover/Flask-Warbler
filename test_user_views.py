@@ -19,7 +19,7 @@ os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
 
 # Now we can import app
 
-from app import app, do_login, do_logout
+from app import app, CURR_USER_KEY
 app.config['TESTING'] = True
 app.config['WTF_CSRF_ENABLED'] = False
 
@@ -58,16 +58,15 @@ class UserViewTestCase(TestCase):
         db.session.add(user2)
         db.session.commit()
 
-        self.user = user
-        self.user2 = user2
+
+        self.user = User.query.filter_by(username='TestUser').one()
+        self.user2 = User.query.filter_by(username='TestUser2').one()
         self.client = app.test_client()
 
     def tearDown(self):
         """Clean up fouled transactions."""
-
+        super().tearDown()
         db.session.rollback()
-        User.query.delete()
-        db.session.commit()
 
     def test_user_signup_success(self):
         """Does user signup work?"""
@@ -86,22 +85,24 @@ class UserViewTestCase(TestCase):
             self.assertEqual(User.query.count(), 3)
             self.assertIn("<p>@TestNewUser</p", html)
 
-    # def test_user_signup_dupe_user_fail(self):
-    #     """Does user signup return failed signup properly when same username"""
+    
+    def test_user_signup_dupe_user_fail(self):
+        """Does user signup return failed signup properly when same username"""
 
-    #     with self.client as client:
-    #         url = "/signup"
-    #         data = {
-    #             "username": "TestUser",
-    #             "email": "testnew@gmail.com",
-    #             "password": "password"
-    #         }
-    #         resp = client.post(url, data=data, follow_redirects=True)
-    #         html = resp.get_data(as_text=True)
+        with self.client as client:
+            resp = client.post("/signup", 
+            data={
+                "username": "TestUser",
+                "email": "testnew@gmail.com",
+                "password": "password"
+            }, 
+            follow_redirects=True)
+            html = resp.get_data(as_text=True)
 
-    #         self.assertEqual(resp.status_code, 200)
-    #         self.assertEqual(User.query.count(), 2)
-    #         # self.assertIn("Username already taken", html)
+            self.assertEqual(resp.status_code, 200)
+            
+        self.assertEqual(User.query.count(), 2)
+        self.assertIn("Username already taken", html)
 
     def test_user_signup_password_fail(self):
         """Does user signup return failed signup properly when pw too short"""
@@ -122,47 +123,39 @@ class UserViewTestCase(TestCase):
 
     def test_user_followers_page(self):
         """ Can you see follower pages for every user when logged in"""
-
+        # 
         with self.client as client:
-            #Check that you can't access if logged out
-            resp = client.get(f"/users/{self.user2.id}/following")
-            self.assertEqual(resp.status_code, 403)
-
-            do_login(self.user)
-            resp = client.get(f"/users/{self.user2.id}/following")
-            html = resp.get_data(as_text=True)
-
-            self.assertEqual(resp.status_code, 200)
-            self.assertIn(f"{self.user.username}", html)
-
-    def test_user_following_page(self):
-        """ Can you see following page for every user when logged in"""
-
-        with self.client as client:
-            #Check that you can't access if logged out
-            resp = client.get(f"/users/{self.user2.id}/followers")
-            self.assertEqual(resp.status_code, 403)
-
-            do_login(self.user)
-            resp = client.get(f"/users/{self.user.id}/following")
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.user.id
+            resp = client.get(f"/users/{self.user.id}/followers")
             html = resp.get_data(as_text=True)
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn(f"{self.user2.username}", html)
 
-    def test_user_add_message(self):
-        """ Can user add message properly when user logged in"""
-
+    def test_user_followers_page_fail(self):
         with self.client as client:
-            #Check that you can't post if logged out
-            url = "/messages/new"
-            resp = client.post(url, data={"text": "Test message"})
+            #Check that you can't access if logged out
+            resp = client.get(f"/users/{self.user2.id}/following")
             self.assertEqual(resp.status_code, 403)
 
-            do_login(self.user)
-            resp = client.post(url, data={"text": "Test message"})
+    def test_user_following_page(self):
+        """ Can you see following page for every user when logged in"""
+        
+        with self.client as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.user.id
+
+            resp = client.get(f"/users/{self.user2.id}/following")
             html = resp.get_data(as_text=True)
 
             self.assertEqual(resp.status_code, 200)
-            self.assertIn("Test message", html)
+            self.assertIn(f"{self.user.username}", html)
+    
+    def test_user_following_page_fail(self):
+        with self.client as client:
+            #Check that you can't access if logged out
+            resp = client.get(f"/users/{self.user2.id}/followers")
+            self.assertEqual(resp.status_code, 403)
+    
 

@@ -287,11 +287,13 @@ def messages_show(message_id):
 def messages_destroy(message_id):
     """Delete a message."""
 
-    if not g.user:
-        flash("Access unauthorized.", "danger")
-        return redirect("/")
+    msg = Message.query.get_or_404(message_id)
 
-    msg = Message.query.get_or_404(message_id)  # Bug Found added 404 Need to check if user is the author
+    if not g.user or g.user != msg.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/"), 403
+
+    # Bug Found added 404 Need to check if user is the author
     db.session.delete(msg)
     db.session.commit()
 

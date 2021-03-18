@@ -174,6 +174,9 @@ class Message(db.Model):
     user = db.relationship('User')
     liked_by = db.relationship('User', secondary='likes')
 
+    def __repr__(self):
+        return f"<Message #{self.id}: {self.text}, {self.user_id}>"
+
 
 class Like(db.Model):
 
