@@ -58,15 +58,13 @@
               <p>{{ msg.text }}</p>
               <!-- Like button -->
               {%if msg.user_id != g.user.id%}
-              <form action="/messages/{{msg.id}}/like" method="POST">
-                <button style="color:blue " class='btn btn-link p-0 messages-like-bottom' type='submit'>
-                  {%if msg not in g.user.likes%}
-                    <i class="far fa-thumbs-up"></i>
-                  {%else%}
-                    <i class="fas fa-thumbs-up"></i>
-                  {%endif%}
-                </button>
-              </form>
+              <button data-msg-id='{{msg.id}}' style="color: light-blue" class='btn btn-link p-0 messages-like-bottom'>
+                {%if msg not in g.user.likes%}
+                  <i class="far fa-thumbs-up"></i>
+                {%else%}
+                  <i class="fas fa-thumbs-up"></i>
+                {%endif%}
+              </button>
               {%endif%}
             </div>
           </li>

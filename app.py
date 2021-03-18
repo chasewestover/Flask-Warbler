@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, g
+from flask import Flask, render_template, request, flash, redirect, session, g, jsonify
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
@@ -299,13 +299,12 @@ def messages_destroy(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
-@app.route('/messages/<int:message_id>/like', methods=["POST"])
+@app.route('/api/messages/<int:message_id>/like', methods=["POST"])
 def messages_toggle_like(message_id):
     """ Like a message """
 
     if not g.user:
-        flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return jsonify({'result': 'fail'}), 403
 
     msg = Message.query.get_or_404(message_id)
 
@@ -314,7 +313,8 @@ def messages_toggle_like(message_id):
     else:
         g.user.likes.append(msg)
     db.session.commit()
-    return redirect("/")
+
+    return jsonify({'result': 'success'}), 200
 
 
 
