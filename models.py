@@ -105,6 +105,17 @@ class User(db.Model):
         found_user_list = [user for user in self.following if user == other_user]
         return len(found_user_list) == 1
 
+    def serialize(self):
+        return {"id": self.id,
+                "username": self.username,
+                "email": self.email,
+                "image_url": self.image_url,
+                "header_image_url": self.header_image_url,
+                "bio": self.bio,
+                "location": self.location,
+                "password": self.password
+                }
+
     @classmethod
     def signup(cls, username, email, password, image_url):
         """Sign up user.
@@ -162,7 +173,7 @@ class Message(db.Model):
     timestamp = db.Column(
         db.DateTime,
         nullable=False,
-        default=datetime.utcnow(),
+        default=datetime.utcnow
     )
 
     user_id = db.Column(
@@ -176,6 +187,12 @@ class Message(db.Model):
 
     def __repr__(self):
         return f"<Message #{self.id}: {self.text}, {self.user_id}>"
+
+    def serialize(self):
+        return {"id": self.id,
+                "text": self.text,
+                "timestamp": self.timestamp.strftime('%d %B %Y'),
+                "user_id": self.user_id}
 
 
 class Like(db.Model):

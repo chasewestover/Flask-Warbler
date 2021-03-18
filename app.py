@@ -252,7 +252,7 @@ def show_likes(user_id):
 ##############################################################################
 # Messages routes:
 
-@app.route('/messages/new', methods=["GET", "POST"])
+@app.route('/api/messages/new', methods=["POST"])
 def messages_add():
     """Add a message:
 
@@ -261,18 +261,16 @@ def messages_add():
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/"), 403
+        return jsonify({'result': 'fail'}), 403
 
-    form = MessageForm()
+    text = request.json["text"]
+    msg = Message(text=text)
+    g.user.messages.append(msg)
+    db.session.commit()
 
-    if form.validate_on_submit():
-        msg = Message(text=form.text.data)
-        g.user.messages.append(msg)
-        db.session.commit()
-
-        return redirect(f"/users/{g.user.id}")
-
-    return render_template('messages/new.html', form=form)
+    return jsonify({'result': 'success',
+                    'msg': msg.serialize(),
+                    'user': g.user.serialize()})
 
 
 @app.route('/messages/<int:message_id>', methods=["GET"])
