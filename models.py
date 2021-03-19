@@ -26,6 +26,25 @@ class Follows(db.Model):
         primary_key=True,
     )
 
+class FollowRequest(db.Model):
+
+    __tablename__ = 'requests'
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    from_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='CASCADE')
+    )
+
+    to_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='CASCADE')
+    )
 
 class User(db.Model):
     """User in the system."""
@@ -78,6 +97,21 @@ class User(db.Model):
 
     likes = db.relationship('Message', secondary='likes')
 
+    from_users = db.relationship(
+        'User',
+        secondary='requests',
+        primaryjoin=(FollowRequest.from_id == id),
+        secondaryjoin=(FollowRequest.to_id == id),
+        backref='to_users'
+    )
+
+    # to_users = db.relationship(
+    #     'User',
+    #     secondary='requests',
+    #     primaryjoin=(FollowRequest.to_id == id),
+    #     secondaryjoin=(FollowRequest.from_id == id)
+    # )
+
     followers = db.relationship(
         "User",
         secondary="follows",
@@ -117,7 +151,7 @@ class User(db.Model):
                 "location": self.location,
                 "password": self.password
                 }
-    
+
     def validate_change_password(self, old_pass, new_pass1, new_pass2):
         if not bcrypt.check_password_hash(self.password, old_pass):
             return False
@@ -218,8 +252,6 @@ class Like(db.Model):
         db.ForeignKey('messages.id', ondelete='CASCADE'),
         primary_key=True
     )
-
-
 
 
 def connect_db(app):

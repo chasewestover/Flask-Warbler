@@ -183,12 +183,14 @@ def users_followers(user_id):
 @authenticate
 def add_follow(follow_id):
     """Add a follow for the currently-logged-in user."""
-    
+
 
     want_to_follow_user = User.query.get_or_404(follow_id)
     if want_to_follow_user.private:
         # =========== NEED TO IMPLEMENT ====================
         # send them a request to follow
+        want_to_follow_user.from_users.append(g.user)
+        db.session.commit()
         flash("Your request has been sent", "success")
         return redirect(f"/users/{g.user.id}/following")
 
@@ -200,17 +202,34 @@ def add_follow(follow_id):
 @app.route('/users/approve/<int:made_request_id>/<int:approver_id>')
 @authenticate
 def approve_follow(made_request_id, approver_id):
-    """Add a follow for the currently-logged-in user."""
-    
+    """Appprove a follow for the currently-logged-in user."""
+
     if not g.user.id == approver_id:
         flash("Access unauthorized.", "danger")
         return redirect("/"), 403
 
     wanted_to_follow_user = User.query.get_or_404(made_request_id)
     g.user.followers.append(wanted_to_follow_user)
+    g.user.from_users.remove(wanted_to_follow_user)
     db.session.commit()
 
     return redirect(f"/users/{g.user.id}/followers")
+
+@app.route('/users/reject/<int:made_request_id>/<int:approver_id>')
+@authenticate
+def reject_follow(made_request_id, approver_id):
+    """Reject a follow for the currently-logged-in user."""
+
+    if not g.user.id == approver_id:
+        flash("Access unauthorized.", "danger")
+        return redirect("/"), 403
+
+    wanted_to_follow_user = User.query.get_or_404(made_request_id)
+    g.user.from_users.remove(wanted_to_follow_user)
+    db.session.commit()
+    flash(f"Follow request from {wanted_to_follow_user.username} rejected.")
+
+    return redirect(f"/users/{g.user.id}")
 
 @app.route('/users/stop-following/<int:follow_id>', methods=['POST'])
 @authenticate

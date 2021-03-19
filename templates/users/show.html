@@ -29,4 +29,15 @@
     {% endif %}
     </ul>
   </div>
+
+  {%if user.from_users%}
+  <div class="col-sm-3">
+      <h4 id="sidebar-requests">Pending Approvals:</h4>
+      {%for from_user in user.from_users%}
+       <p>Follow Request From:</p><a href="/users/{{from_user.id}}">{{from_user.username}}</a>
+       <a class="btn btn-primary" href="/users/approve/{{from_user.id}}/{{user.id}}">Approve</a>
+       <a class="btn btn-danger" href="/users/reject/{{from_user.id}}/{{user.id}}">Reject</a>
+      {%endfor%}
+  </div>
+  {%endif%}
 {% endblock %}
