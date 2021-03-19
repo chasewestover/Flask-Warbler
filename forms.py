@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, TextAreaField
-from wtforms.validators import InputRequired, Email, Length
+from wtforms import StringField, PasswordField, TextAreaField, BooleanField
+from wtforms.validators import InputRequired, Email, Length, EqualTo
 
 
 class MessageForm(FlaskForm):
@@ -33,3 +33,11 @@ class EditUserForm(FlaskForm):
     header_image_url = StringField('(Optional) Header Image URL')
     bio = StringField('(Optional) Bio')
     password = PasswordField('Verify password', validators=[Length(min=6)])
+    private = BooleanField('Private')
+
+class ChangePasswordForm(FlaskForm):
+    """Change password form."""
+
+    cur_pass = PasswordField('Current password', validators=[Length(min=6)])
+    new_pass1 = PasswordField('New Password', validators=[Length(min=6)])
+    new_pass2 = PasswordField('Confirm new password', validators=[Length(min=6), EqualTo('new_pass1', message="Passwords don't match")])

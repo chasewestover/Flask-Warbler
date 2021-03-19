@@ -72,6 +72,8 @@ class User(db.Model):
         nullable=False,
     )
 
+    private = db.Column(db.Boolean, default=False)
+
     messages = db.relationship('Message', order_by='Message.timestamp.desc()')
 
     likes = db.relationship('Message', secondary='likes')
@@ -115,6 +117,13 @@ class User(db.Model):
                 "location": self.location,
                 "password": self.password
                 }
+    
+    def validate_change_password(self, old_pass, new_pass1, new_pass2):
+        if not bcrypt.check_password_hash(self.password, old_pass):
+            return False
+        self.password = bcrypt.generate_password_hash(new_pass1).decode('UTF-8')
+        return True
+
 
     @classmethod
     def signup(cls, username, email, password, image_url):
@@ -122,7 +131,6 @@ class User(db.Model):
 
         Hashes password and adds user to system.
         """
-
         hashed_pwd = bcrypt.generate_password_hash(password).decode('UTF-8')
 
         user = User(

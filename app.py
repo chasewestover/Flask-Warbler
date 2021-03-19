@@ -3,8 +3,9 @@ import os
 from flask import Flask, render_template, request, flash, redirect, session, g, jsonify
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
+from functools import wraps
 
-from forms import UserAddForm, LoginForm, MessageForm, EditUserForm
+from forms import UserAddForm, LoginForm, MessageForm, EditUserForm, ChangePasswordForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -30,6 +31,7 @@ connect_db(app)
 
 
 def authenticate(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         if not g.user:
             flash("Access unauthorized.", "danger")
@@ -148,15 +150,18 @@ def list_users():
 
 
 @app.route('/users/<int:user_id>')
+@authenticate
 def users_show(user_id):
     """Show user profile."""
 
+    # check whether private, if private, check whether logged in user following the account
     user = User.query.get_or_404(user_id)
 
     return render_template('users/show.html', user=user)
 
 
 @app.route('/users/<int:user_id>/following')
+@authenticate
 def show_following(user_id):
     """Show list of people this user is following."""
 
@@ -166,6 +171,7 @@ def show_following(user_id):
 
 
 @app.route('/users/<int:user_id>/followers')
+@authenticate
 def users_followers(user_id):
     """Show list of followers of this user."""
 
@@ -174,17 +180,40 @@ def users_followers(user_id):
 
 
 @app.route('/users/follow/<int:follow_id>', methods=['POST'])
+@authenticate
 def add_follow(follow_id):
     """Add a follow for the currently-logged-in user."""
+    
 
-    followed_user = User.query.get_or_404(follow_id)
-    g.user.following.append(followed_user)
+    want_to_follow_user = User.query.get_or_404(follow_id)
+    if want_to_follow_user.private:
+        # =========== NEED TO IMPLEMENT ====================
+        # send them a request to follow
+        flash("Your request has been sent", "success")
+        return redirect(f"/users/{g.user.id}/following")
+
+    g.user.following.append(want_to_follow_user)
     db.session.commit()
 
     return redirect(f"/users/{g.user.id}/following")
 
+@app.route('/users/approve/<int:made_request_id>/<int:approver_id>')
+@authenticate
+def approve_follow(made_request_id, approver_id):
+    """Add a follow for the currently-logged-in user."""
+    
+    if not g.user.id == approver_id:
+        flash("Access unauthorized.", "danger")
+        return redirect("/"), 403
+
+    wanted_to_follow_user = User.query.get_or_404(made_request_id)
+    g.user.followers.append(wanted_to_follow_user)
+    db.session.commit()
+
+    return redirect(f"/users/{g.user.id}/followers")
 
 @app.route('/users/stop-following/<int:follow_id>', methods=['POST'])
+@authenticate
 def stop_following(follow_id):
     """Have currently-logged-in-user stop following this user."""
 
@@ -196,6 +225,7 @@ def stop_following(follow_id):
 
 
 @app.route('/users/profile', methods=["GET", "POST"])
+@authenticate
 def profile():
     """Update profile for current user."""
 
@@ -208,12 +238,14 @@ def profile():
             g.user.image_url = form.image_url.data
             g.user.header_image_url = form.header_image_url.data
             g.user.bio = form.bio.data
+            g.user.private = form.private.data
             db.session.commit()
             return redirect(f'/users/{g.user.id}')
         flash('Incorrect password', 'danger')
     return render_template('users/edit.html', user_id=g.user.id, form=form)
 
 @app.route('/users/delete', methods=["POST"])
+@authenticate
 def delete_user():
     """Delete user."""
 
@@ -225,6 +257,7 @@ def delete_user():
     return redirect("/signup")
 
 @app.route('/users/<int:user_id>/likes')
+@authenticate
 def show_likes(user_id):
     """Show list of user's likes"""
 
@@ -233,30 +266,32 @@ def show_likes(user_id):
 
     return render_template('users/likes.html', user=user)
 
+@app.route('/users/<int:user_id>/password', methods=["GET", "POST"])
+@authenticate
+def change_password(user_id):
+    """Change password"""
+
+    if g.user.id != user_id:
+        flash("Access unauthorized.", "danger")
+        return redirect("/"), 403
+
+    form = ChangePasswordForm()
+
+    if form.validate_on_submit():
+        if g.user.validate_change_password(form.cur_pass.data, form.new_pass1.data, form.new_pass2.data):
+            db.session.commit()
+            flash("Successfully changed password", "success")
+            return redirect("/")
+
+    return render_template("/users/change_pass.html", form=form)
+
 
 ##############################################################################
 # Messages routes:
 
-@app.route('/messages/new', methods=["GET", "POST"])
-def messages_add():
-    """Add a message:
-
-    Show form if GET. If valid, update message and redirect to user page.
-    """
-
-    form = MessageForm()
-
-    if form.validate_on_submit():
-        msg = Message(text=form.text.data)
-        g.user.messages.append(msg)
-        db.session.commit()
-
-        return redirect(f"/users/{g.user.id}")
-
-    return render_template('messages/new.html', form=form)
-
 
 @app.route('/messages/<int:message_id>', methods=["GET"])
+@authenticate
 def messages_show(message_id):
     """Show a message."""
 
@@ -265,6 +300,7 @@ def messages_show(message_id):
 
 
 @app.route('/messages/<int:message_id>/delete', methods=["POST"])
+@authenticate
 def messages_destroy(message_id):
     """Delete a message."""
 
@@ -279,6 +315,28 @@ def messages_destroy(message_id):
     db.session.commit()
 
     return redirect(f"/users/{g.user.id}")
+
+# MESSAGE API's
+
+@app.route('/api/messages/new', methods=["POST"])
+def messages_add():
+    """Add a message:
+
+    Show form if GET. If valid, update message and redirect to user page.
+    """
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return jsonify({'result': 'fail'}), 403
+
+    text = request.json["text"]
+    msg = Message(text=text)
+    g.user.messages.append(msg)
+    db.session.commit()
+
+    return jsonify({'result': 'success',
+                    'msg': msg.serialize(),
+                    'user': g.user.serialize()})
 
 @app.route('/api/messages/<int:message_id>/like', methods=["POST"])
 def messages_toggle_like(message_id):
