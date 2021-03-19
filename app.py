@@ -184,7 +184,6 @@ def users_followers(user_id):
 def add_follow(follow_id):
     """Add a follow for the currently-logged-in user."""
 
-
     want_to_follow_user = User.query.get_or_404(follow_id)
     if want_to_follow_user.private:
         # =========== NEED TO IMPLEMENT ====================
@@ -213,6 +212,7 @@ def approve_follow(made_request_id, approver_id):
     g.user.from_users.remove(wanted_to_follow_user)
     db.session.commit()
 
+    flash(f"Follow request from {wanted_to_follow_user.username} approved.", "success")
     return redirect(f"/users/{g.user.id}/followers")
 
 @app.route('/users/reject/<int:made_request_id>/<int:approver_id>')
@@ -227,7 +227,7 @@ def reject_follow(made_request_id, approver_id):
     wanted_to_follow_user = User.query.get_or_404(made_request_id)
     g.user.from_users.remove(wanted_to_follow_user)
     db.session.commit()
-    flash(f"Follow request from {wanted_to_follow_user.username} rejected.")
+    flash(f"Follow request from {wanted_to_follow_user.username} rejected.", "success")
 
     return redirect(f"/users/{g.user.id}")
 
