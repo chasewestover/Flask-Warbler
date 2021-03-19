@@ -188,7 +188,7 @@ def add_follow(follow_id):
     if want_to_follow_user.private:
         # =========== NEED TO IMPLEMENT ====================
         # send them a request to follow
-        want_to_follow_user.from_users.append(g.user)
+        want_to_follow_user.from_users.append(g.user) 
         db.session.commit()
         flash("Your request has been sent", "success")
         return redirect(f"/users/{g.user.id}/following")
